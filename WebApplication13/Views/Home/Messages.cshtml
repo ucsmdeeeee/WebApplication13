@@ -1,0 +1,126 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+</head>
+<body>
+    <!-- Логин/Выход -->
+    <button onclick="logout()">Logout</button>
+
+    <!-- Список пользователей -->
+    <div>
+        <h1>Choose a user to chat with</h1>
+        <div>
+            <label for="userSelect">Choose a user:</label>
+            <select id="userSelect">
+                <!-- Сюда будут добавляться пользователи -->
+            </select>
+        </div>
+        <button onclick="createChat()">Start Chat</button>
+    </div>
+
+    <!-- Список чатов и сообщения -->
+    <div style="display: flex; height: 100vh;">
+        <!-- Список чатов -->
+        <div style="width: 30%; border-right: 1px solid #ccc; padding: 10px;">
+            <h3>Chats</h3>
+            <select id="chatList" onchange="loadMessagesFromChat()">
+                <!-- Сюда будут добавляться чаты -->
+            </select>
+        </div>
+
+        <!-- Чат и сообщения -->
+        <div style="flex-grow: 1; padding: 10px;">
+            <h3>Messages</h3>
+            <div id="messages" style="border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: scroll;">
+                <!-- Здесь будут отображаться сообщения -->
+            </div>
+            <textarea id="messageContent" placeholder="Type your message" style="width: 100%;"></textarea>
+            <button onclick="sendMessage()">Send Message</button>
+        </div>
+    </div>
+
+    <script>
+        let userId = 1; // Замените на текущий id пользователя
+
+        // Загрузка пользователей для выбора
+        async function loadUsers() {
+            const response = await fetch('/api/user/getAll'); // Предположим, что есть API для получения всех пользователей
+            const users = await response.json();
+            const userSelect = document.getElementById('userSelect');
+            users.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user.Id;
+                option.textContent = user.Username; // Выводим имя пользователя
+                userSelect.appendChild(option);
+            });
+        }
+
+        // Загрузка чатов для выбранного пользователя
+        async function loadChats() {
+            const userId = document.getElementById('userSelect').value;
+            const response = await fetch(`/api/chat/get/${userId}`);
+            const chats = await response.json();
+            const chatSelect = document.getElementById('chatList');
+            chatSelect.innerHTML = ''; // Очистить список чатов
+
+            chats.forEach(chat => {
+                const option = document.createElement('option');
+                // Показать имя собеседника вместо ID
+                option.value = chat.Id;
+                option.textContent = `Chat with ${chat.User1Id === userId ? chat.User2Username : chat.User1Username}`;
+                chatSelect.appendChild(option);
+            });
+        }
+
+        // Загрузка сообщений для выбранного чата
+        async function loadMessagesFromChat() {
+            const chatId = document.getElementById('chatList').value;
+            const response = await fetch(`/api/message/getMessages/${chatId}`);
+            const messages = await response.json();
+            const messagesDiv = document.getElementById('messages');
+            messagesDiv.innerHTML = ''; // Очистить сообщения
+
+            messages.forEach(message => {
+                const messageDiv = document.createElement('div');
+                // Показать имя отправителя и содержание сообщения
+                messageDiv.textContent = `${message.Sender}: ${message.Content}`;
+                messagesDiv.appendChild(messageDiv);
+            });
+        }
+
+        // Отправка сообщения
+        async function sendMessage() {
+            const chatId = document.getElementById('chatList').value;
+            const content = document.getElementById('messageContent').value;
+            const senderId = document.getElementById('userSelect').value;
+            const receiverId = 2; // Получатель, поменяйте в зависимости от чата
+
+            const response = await fetch('/api/chat/sendMessage', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    chatId: chatId,
+                    senderId: senderId,
+                    receiverId: receiverId,
+                    content: content
+                })
+            });
+
+            const result = await response.json();
+            alert(result.message);
+
+            loadMessagesFromChat(); // Перезагрузить сообщения
+        }
+
+        // Инициализация
+        loadChats();
+        load();
+
+    </script>
+</body>
+</html>
